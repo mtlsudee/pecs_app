@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "73990535522",
+    "project_id": "pecsapp-a62ab",
+    "storage_bucket": "pecsapp-a62ab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:73990535522:android:be490e22467aae6363943b",
+        "android_client_info": {
+          "package_name": "com.example.pecs_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC706rNChpmaDmco5wyVYfSLhV76Lon5pk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
