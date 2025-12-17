@@ -1,13 +1,32 @@
 {
   "project_info": {
-    "project_number": "73990535522",
-    "project_id": "pecsapp-a62ab",
-    "storage_bucket": "pecsapp-a62ab.firebasestorage.app"
+    "project_number": "787772625454",
+    "project_id": "pecs-a0e0e",
+    "storage_bucket": "pecs-a0e0e.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:73990535522:android:be490e22467aae6363943b",
+        "mobilesdk_app_id": "1:787772625454:android:df156aa6b81f925cc805bf",
+        "android_client_info": {
+          "package_name": "com.example.pecs"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOT3oxQSxHv_ghPx5fzW6Kn96VMGtgYGg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:787772625454:android:846ae6af51c64201c805bf",
         "android_client_info": {
           "package_name": "com.example.pecs_app"
         }
@@ -15,7 +34,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyC706rNChpmaDmco5wyVYfSLhV76Lon5pk"
+          "current_key": "AIzaSyBOT3oxQSxHv_ghPx5fzW6Kn96VMGtgYGg"
         }
       ],
       "services": {
