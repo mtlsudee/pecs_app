@@ -1,14 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 import '../services/database_helper.dart';
 import '../services/security_service.dart';
-
-
 
 class StudentPage extends StatefulWidget {
   const StudentPage({super.key});
@@ -18,6 +18,8 @@ class StudentPage extends StatefulWidget {
 }
 
 class _StudentPageState extends State<StudentPage> {
+  final FlutterTts flutterTts = FlutterTts();
+
   // --- RENK TANIMLARI ---
   final Color _primaryColor = const Color(0xFF6C63FF);
   final Color _backgroundColor = const Color(0xFFF0F0F5);
@@ -39,16 +41,17 @@ class _StudentPageState extends State<StudentPage> {
   String? currentSubCategory;
 
   List<Map<String, dynamic>> sentenceStrip = [];
+  List<Map<String, dynamic>> allCards = [];
 
   // 1. ANA KATEGORİLER
   final List<Map<String, dynamic>> mainCategories = [
-    {"id": "beslenme", "label": "Beslenme", "color": Colors.green, "icon": Icons.restaurant, "hasSub": true},
-    {"id": "canlilar", "label": "Canlılar", "color": Colors.orange, "icon": Icons.pets, "hasSub": true},
-    {"id": "eylemler", "label": "Eylemler", "color": Colors.blue, "icon": Icons.directions_run, "hasSub": true},
-    {"id": "nesneler", "label": "Nesneler", "color": Colors.purple, "icon": Icons.chair, "hasSub": true},
-    {"id": "ozellikler", "label": "Özellikler", "color": Colors.teal, "icon": Icons.palette, "hasSub": true},
-    {"id": "vucut", "label": "Vücut", "color": Colors.redAccent, "icon": Icons.accessibility_new, "hasSub": false},
-    {"id": "yerler", "label": "Yerler", "color": Colors.brown, "icon": Icons.location_on, "hasSub": false},
+    {"id": "beslenme", "label": "Beslenme", "color": const Color(0xFFFFB74D), "icon": Icons.restaurant, "hasSub": true},
+    {"id": "canlilar", "label": "Canlılar", "color": const Color(0xFF8BC34A), "icon": Icons.pets, "hasSub": true},
+    {"id": "eylemler", "label": "Eylemler", "color": const Color(0xFFE86868), "icon": Icons.directions_run, "hasSub": true},
+    {"id": "nesneler", "label": "Nesneler", "color": const Color(0xFF2196F3), "icon": Icons.chair, "hasSub": true},
+    {"id": "ozellikler", "label": "Özellikler", "color": const Color(0xFFA93DAC), "icon": Icons.palette, "hasSub": true},
+    {"id": "vucut", "label": "Vücut", "color": const Color(0xFFEA8DEC), "icon": Icons.accessibility_new, "hasSub": false},
+    {"id": "yerler", "label": "Yerler", "color": const Color(0xFFFFF176), "icon": Icons.location_on, "hasSub": false},
   ];
 
   // 2. ALT KATEGORİLER
@@ -83,54 +86,82 @@ class _StudentPageState extends State<StudentPage> {
     ],
   };
 
-  // 3. KARTLAR
-  final List<Map<String, dynamic>> allCards = [
-    // BESLENME -> MEYVE
-    {"text": "Elma", "image": "assets/cards/Kartlar/Beslenme/Meyve/elma.png", "category": "meyve"},
-    {"text": "Armut", "image": "assets/cards/Kartlar/Beslenme/Meyve/armut.png", "category": "meyve"},
-    {"text": "Muz", "image": "assets/cards/Kartlar/Beslenme/Meyve/muz.png", "category": "meyve"},
-
-    // --- CANLILAR > BİTKİ GRUBU ---
-   /* {"text": "Ayçiçeği", "image": "assets/Canlilar/Bitki/aycicegi.png", "category": "bitki"},
-    {"text": "Bitki", "image": "assets/Canlilar/Bitki/bitki.png", "category": "bitki"},
-    {"text": "Çiçek", "image": "assets/Canlilar/Bitki/cicek.png", "category": "bitki"},
-    {"text": "Gül", "image": "assets/Canlilar/Bitki/gul.png", "category": "bitki"},
-    {"text": "Kaktüs", "image": "assets/Canlilar/Bitki/kaktus.png", "category": "bitki"},
-    {"text": "Karanfil", "image": "assets/Canlilar/Bitki/karanfil_cicegi.png", "category": "bitki"},
-    {"text": "Kök", "image": "assets/Canlilar/Bitki/kok.png", "category": "bitki"},
-    {"text": "Lale", "image": "assets/Canlilar/Bitki/lale.png", "category": "bitki"},
-    {"text": "Lavanta", "image": "assets/Canlilar/Bitki/lavanta.png", "category": "bitki"},
-    {"text": "Palmiye", "image": "assets/Canlilar/Bitki/palmiye.png", "category": "bitki"},
-    {"text": "Papatya", "image": "assets/Canlilar/Bitki/papatya.png", "category": "bitki"},
-    {"text": "Yaprak", "image": "assets/Canlilar/Bitki/yaprak.png", "category": "bitki"}, // İsmini düzelttin varsayıyorum
-    {"text": "Yonca", "image": "assets/Canlilar/Bitki/yonca.png", "category": "bitki"},*/
-
-    // BESLENME -> İÇECEK
-    {"text": "Su", "emoji": "💧", "category": "icecek"},
-    {"text": "Süt", "emoji": "🥛", "category": "icecek"},
-
-    // CANLILAR -> HAYVANLAR
-    {"text": "Kedi", "emoji": "🐱", "category": "hayvanlar"},
-    {"text": "Köpek", "emoji": "🐶", "category": "hayvanlar"},
-
-    // ÖZELLİKLER -> DUYGULAR
-    {"text": "Mutlu", "emoji": "😊", "category": "duygular"},
-    {"text": "Üzgün", "emoji": "😢", "category": "duygular"},
-
-    // YERLER
-    {"text": "Ev", "emoji": "🏠", "category": "yerler"},
-    {"text": "Okul", "emoji": "🏫", "category": "yerler"},
-
-    // VÜCUT
-    {"text": "Baş", "emoji": "🙆", "category": "vucut"},
-    {"text": "Kol", "emoji": "💪", "category": "vucut"},
-  ];
-
   @override
   void initState() {
     super.initState();
     _checkLoginStatus();
     _setupConnectivityListener();
+    _loadCardsFromAssets();
+    _initTts();
+  }
+
+  Future<void> _initTts() async {
+    await flutterTts.setLanguage("tr-TR");
+    await flutterTts.setSpeechRate(0.5);
+    await flutterTts.setPitch(1.0);
+  }
+
+  Future<void> _speakSentence() async {
+    if (sentenceStrip.isEmpty) return;
+    String sentence = sentenceStrip.map((card) => card['text']).join(" ");
+    await flutterTts.speak(sentence);
+  }
+
+  Future<void> _loadCardsFromAssets() async {
+    try {
+      final manifestContent = await DefaultAssetBundle.of(context).loadString('AssetManifest.json');
+      final Map<String, dynamic> manifestMap = json.decode(manifestContent);
+      final imagePaths = manifestMap.keys
+          .where((String key) => key.contains('assets/'))
+          .where((String key) => key.endsWith('.png') || key.endsWith('.jpg'))
+          .toList();
+
+      List<Map<String, dynamic>> detectedCards = [];
+
+      for (String path in imagePaths) {
+        String categoryId = "";
+        if (path.contains("atistirmalik")) categoryId = "atistirmalik";
+        else if (path.contains("icecek")) categoryId = "icecek";
+        else if (path.contains("meyve")) categoryId = "meyve";
+        else if (path.contains("ogun_yemekler")) categoryId = "ogun";
+        else if (path.contains("sebze")) categoryId = "sebze";
+        else if (path.contains("Bitki")) categoryId = "bitki";
+        else if (path.contains("Hayvanlar")) categoryId = "hayvanlar";
+        else if (path.contains("Insan_rolleri")) categoryId = "insan_rolleri";
+        else if (path.contains("Meslekler")) categoryId = "meslekler";
+        else if (path.contains("Gunluk_eylemler")) categoryId = "gunluk";
+        else if (path.contains("Oz_Bakim")) categoryId = "ozbakim";
+        else if (path.contains("Aksesuarlar")) categoryId = "aksesuar";
+        else if (path.contains("Arac_gerecler")) categoryId = "arac_gerec";
+        else if (path.contains("Ev_esyalari")) categoryId = "ev_esyasi";
+        else if (path.contains("Oyuncaklar")) categoryId = "oyuncak";
+        else if (path.contains("Duygular")) categoryId = "duygular";
+        else if (path.contains("Renkler")) categoryId = "renkler";
+        else if (path.contains("Sayilar")) categoryId = "sayilar";
+        else if (path.contains("Vucut_Bolumleri")) categoryId = "vucut";
+        else if (path.contains("Yerler")) categoryId = "yerler";
+
+        if (categoryId.isNotEmpty) {
+          String filename = path.split('/').last.split('.').first;
+          String cleanName = filename.replaceAll('_', ' ');
+          String displayName = cleanName.isEmpty ? "" : cleanName[0].toUpperCase() + cleanName.substring(1);
+
+          detectedCards.add({
+            "text": displayName,
+            "image": path,
+            "category": categoryId,
+          });
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          allCards = detectedCards;
+        });
+      }
+    } catch (e) {
+      print("Kart yükleme hatası: $e");
+    }
   }
 
   Future<void> _checkLoginStatus() async {
@@ -230,6 +261,7 @@ class _StudentPageState extends State<StudentPage> {
     _nameController.dispose();
     _surnameController.dispose();
     _tcController.dispose();
+    flutterTts.stop();
     super.dispose();
   }
 
@@ -242,17 +274,17 @@ class _StudentPageState extends State<StudentPage> {
     }
   }
 
-  // --- DÜZELTİLMİŞ TASARIM (TÜM SAYFA KAYIYOR) ---
+  // --- ANA EKRAN YAPISI (TAM SAYFA KAYDIRMALI) ---
   Widget _buildPECSView() {
     return Scaffold(
       backgroundColor: const Color(0xFFE3F2FD),
       body: SafeArea(
-        // SingleChildScrollView: Sayfanın tamamının tek bir parça gibi kaymasını sağlar.
+        // SingleChildScrollView TÜM SAYFAYI KAPLIYOR
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(), // Yaylanma efekti (iOS tarzı)
+          physics: const BouncingScrollPhysics(), // Yaylanarak kaydırma
           child: Column(
             children: [
-              // 1. HEADER (Geri Dön / İsim / Çıkış)
+              // 1. HEADER
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
                 child: Row(
@@ -287,49 +319,11 @@ class _StudentPageState extends State<StudentPage> {
               ),
 
               // 2. CÜMLE ŞERİDİ
-              Container(
-                height: 110,
-                width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.blue.shade200, width: 2),
-                    boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))]
-                ),
-                child: sentenceStrip.isEmpty
-                    ? const Center(child: Text("Bir kart seçin...", style: TextStyle(color: Colors.grey, fontSize: 18)))
-                    : ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.all(10),
-                  itemCount: sentenceStrip.length,
-                  itemBuilder: (context, index) {
-                    final card = sentenceStrip[index];
-                    return Container(
-                      width: 85,
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade300),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)]
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if(card['image'] != null) Image.asset(card['image'], width: 45, height: 45, errorBuilder: (c,o,s) => const Icon(Icons.image)),
-                          if(card['emoji'] != null) Text(card['emoji'], style: const TextStyle(fontSize: 35)),
-                          Text(card['text'], style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center, maxLines: 1),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
+              _buildVelcroSentenceStrip(),
 
-              // 3. YATAY KATEGORİ MENÜSÜ
+              // 3. ANA KATEGORİ MENÜSÜ (BÜYÜK BOYUT)
               SizedBox(
-                height: 65,
+                height: 90,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -347,21 +341,21 @@ class _StudentPageState extends State<StudentPage> {
                           },
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                             decoration: BoxDecoration(
                                 color: cat['color'],
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(15),
                                 border: isSelected ? Border.all(color: Colors.black54, width: 3) : null,
                                 boxShadow: [BoxShadow(color: cat['color'].withOpacity(0.4), blurRadius: 6, offset: const Offset(0, 3))]
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(cat['icon'], color: Colors.white, size: 20),
-                                const SizedBox(height: 2),
+                                Icon(cat['icon'], color: Colors.white, size: 30),
+                                const SizedBox(height: 5),
                                 Text(
                                   cat['label'],
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                                 ),
                               ],
                             ),
@@ -369,10 +363,15 @@ class _StudentPageState extends State<StudentPage> {
                         ),
                       );
                     }),
-                    _buildActionBtn(Icons.volume_up, Colors.grey.shade800, () {}),
-                    _buildActionBtn(Icons.refresh, Colors.red, () {
-                      setState(() { sentenceStrip.clear(); });
-                    }),
+                    Row(
+                      children: [
+                        _buildActionBtn(Icons.volume_up_rounded, Colors.green, _speakSentence, label: "Oku"),
+                        const SizedBox(width: 5),
+                        _buildActionBtn(Icons.refresh_rounded, Colors.red, () {
+                          setState(() { sentenceStrip.clear(); });
+                        }, label: "Sil"),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -380,10 +379,11 @@ class _StudentPageState extends State<StudentPage> {
               const SizedBox(height: 10),
 
               // 4. İÇERİK ALANI
-              // Burası artık Expanded değil, sayfanın akışına göre uzayan bir alan.
+              // Sabit yükseklik ve Expanded YOK. İçerik kadar uzayacak.
               Container(
+                width: double.infinity,
                 margin: const EdgeInsets.symmetric(horizontal: 10),
-                padding: const EdgeInsets.all(5),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -391,7 +391,7 @@ class _StudentPageState extends State<StudentPage> {
                 child: _buildDynamicContent(),
               ),
 
-              const SizedBox(height: 20), // Sayfa altı boşluğu
+              const SizedBox(height: 40), // Alt boşluk
             ],
           ),
         ),
@@ -399,39 +399,19 @@ class _StudentPageState extends State<StudentPage> {
     );
   }
 
-  Widget _buildActionBtn(IconData icon, Color color, VoidCallback onTap) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          width: 50,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: const Offset(0, 2))],
-          ),
-          child: Icon(icon, color: Colors.white, size: 24),
-        ),
-      ),
-    );
-  }
-
+  // --- İÇERİK GÖSTERİMİ (DİKEY ve KAYDIRILAMAZ) ---
+  // Çünkü ana sayfa zaten kaydırılıyor (SingleChildScrollView)
   Widget _buildDynamicContent() {
     if (currentMainCategory == null) {
-      // İçerik az olduğu için yükseklik veriyoruz ki sayfa boş kalmasın
-      return SizedBox(
+      return const SizedBox(
         height: 300,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.touch_app, size: 80, color: Colors.blue.shade100),
-              const SizedBox(height: 20),
-              const Text(
-                "Lütfen yukarıdan bir kategori seçin.",
-                style: TextStyle(fontSize: 18, color: Colors.grey, fontWeight: FontWeight.bold),
-              ),
+              Icon(Icons.touch_app, size: 80, color: Colors.grey),
+              SizedBox(height: 20),
+              Text("Lütfen yukarıdan bir kategori seçin.", style: TextStyle(fontSize: 18, color: Colors.grey, fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -440,21 +420,18 @@ class _StudentPageState extends State<StudentPage> {
 
     final selectedMain = mainCategories.firstWhere((c) => c['id'] == currentMainCategory);
 
-    // ALT KATEGORİ SEÇİMİ
+    // A) ALT KATEGORİ SEÇİMİ
     if (selectedMain['hasSub'] == true && currentSubCategory == null) {
       final subs = subCategories[currentMainCategory] ?? [];
-
       return Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text("${selectedMain['label']} > Alt Kategori Seçin", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
           ),
-          // GridView.builder'ı shrinkWrap: true ve physics: NeverScrollableScrollPhysics
-          // ile sarmalıyoruz ki ana sayfanın kaymasını bozmasın.
           GridView.builder(
-            shrinkWrap: true, // İÇERİK KADAR YER KAPLA
-            physics: const NeverScrollableScrollPhysics(), // KENDİ İÇİNDE KAYDIRMA, SAYFAYLA BERABER KAY
+            shrinkWrap: true, // ÖNEMLİ: Kendi scroll'unu kapat
+            physics: const NeverScrollableScrollPhysics(), // ÖNEMLİ: Sayfa scroll'una uy
             padding: const EdgeInsets.all(10),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
@@ -494,7 +471,7 @@ class _StudentPageState extends State<StudentPage> {
       );
     }
 
-    // KART LİSTELEME
+    // B) KART LİSTELEME
     String filterId = currentSubCategory ?? currentMainCategory!;
     final filteredCards = allCards.where((card) => card['category'] == filterId).toList();
 
@@ -521,10 +498,10 @@ class _StudentPageState extends State<StudentPage> {
           ),
 
         filteredCards.isEmpty
-            ? const SizedBox(height: 200, child: Center(child: Text("Bu kategoride kart yok.", style: TextStyle(color: Colors.grey))))
+            ? const SizedBox(height: 200, child: Center(child: Text("Bu kategoride kart bulunamadı.", style: TextStyle(color: Colors.grey))))
             : GridView.builder(
-          shrinkWrap: true, // İÇERİK KADAR YER KAPLA
-          physics: const NeverScrollableScrollPhysics(), // SAYFAYLA BERABER KAY
+          shrinkWrap: true, // ÖNEMLİ
+          physics: const NeverScrollableScrollPhysics(), // ÖNEMLİ
           padding: const EdgeInsets.all(10),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
@@ -537,7 +514,11 @@ class _StudentPageState extends State<StudentPage> {
             final card = filteredCards[index];
             return GestureDetector(
               onTap: () {
-                setState(() { sentenceStrip.add(card); });
+                setState(() {
+                  Map<String, dynamic> newCard = Map.from(card);
+                  newCard['uniqueId'] = DateTime.now().millisecondsSinceEpoch.toString();
+                  sentenceStrip.add(newCard);
+                });
                 kartSeciminiKaydet(card['text'], _getCurrentTitle());
               },
               child: Container(
@@ -548,23 +529,22 @@ class _StudentPageState extends State<StudentPage> {
                   boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 6, offset: const Offset(0, 3))],
                 ),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if(card['image'] != null)
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Image.asset(card['image'], fit: BoxFit.contain, errorBuilder: (c,o,s) => const Icon(Icons.broken_image, color: Colors.grey)),
+                          padding: const EdgeInsets.all(5.0),
+                          child: Image.asset(card['image'], fit: BoxFit.contain),
                         ),
                       ),
-                    if(card['emoji'] != null)
-                      Text(card['emoji'], style: const TextStyle(fontSize: 40)),
-
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
+                      padding: const EdgeInsets.all(4.0),
                       child: Text(
                         card['text'],
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -579,14 +559,126 @@ class _StudentPageState extends State<StudentPage> {
 
   String _getCurrentTitle() {
     if (currentMainCategory == null) return "";
-    final main = mainCategories.firstWhere((c) => c['id'] == currentMainCategory);
+    final main = mainCategories.firstWhere((c) => c['id'] == currentMainCategory, orElse: () => {'label': ''});
     if (currentSubCategory == null) return main['label'];
     final subs = subCategories[currentMainCategory] ?? [];
     final sub = subs.firstWhere((s) => s['id'] == currentSubCategory, orElse: () => {'label': ''});
     return sub['label'];
   }
 
-  // --- LOGIN FORMU ---
+  Widget _buildVelcroSentenceStrip() {
+    return Container(
+      height: 110,
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.blue.shade100, width: 2),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            height: 25,
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(5),
+              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
+            ),
+          ),
+          sentenceStrip.isEmpty
+              ? const Center(child: Text("Bir kart seçin...", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)))
+              : ReorderableListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            buildDefaultDragHandles: true,
+            proxyDecorator: (child, index, animation) {
+              return Material(
+                color: Colors.transparent,
+                elevation: 10,
+                child: child,
+              );
+            },
+            onReorder: (int oldIndex, int newIndex) {
+              setState(() {
+                if (oldIndex < newIndex) {
+                  newIndex -= 1;
+                }
+                final item = sentenceStrip.removeAt(oldIndex);
+                sentenceStrip.insert(newIndex, item);
+              });
+            },
+            itemCount: sentenceStrip.length,
+            itemBuilder: (context, index) {
+              final card = sentenceStrip[index];
+              return GestureDetector(
+                key: ValueKey(card['uniqueId']),
+                onTap: () {
+                  setState(() {
+                    sentenceStrip.removeAt(index);
+                  });
+                },
+                child: Container(
+                  width: 80,
+                  margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade400),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4, offset: const Offset(0, 2))]
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if(card['image'] != null) Image.asset(card['image'], width: 45, height: 45, errorBuilder: (c,o,s) => const Icon(Icons.image)),
+                      Text(card['text'], style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center, maxLines: 1),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionBtn(IconData icon, Color color, VoidCallback onTap, {String label = ""}) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          width: 60,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: const Offset(0, 2))],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: 28),
+              if(label.isNotEmpty)
+                Text(label, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernTextField({required TextEditingController controller, required String hintText, required IconData icon, bool isNumber = false, String? Function(String?)? validator}) {
+    return Container(
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5))]),
+      child: TextFormField(controller: controller, keyboardType: isNumber ? TextInputType.number : TextInputType.text, inputFormatters: isNumber ? [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(11)] : [], validator: validator ?? (value) => value!.isEmpty ? "$hintText boş bırakılamaz" : null, decoration: InputDecoration(hintText: hintText, hintStyle: TextStyle(color: Colors.grey.shade400), prefixIcon: Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Icon(icon, color: _primaryColor)), border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20))),
+    );
+  }
+
   Widget _buildLoginForm() {
     return Scaffold(
       backgroundColor: _backgroundColor,
@@ -628,13 +720,6 @@ class _StudentPageState extends State<StudentPage> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildModernTextField({required TextEditingController controller, required String hintText, required IconData icon, bool isNumber = false, String? Function(String?)? validator}) {
-    return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5))]),
-      child: TextFormField(controller: controller, keyboardType: isNumber ? TextInputType.number : TextInputType.text, inputFormatters: isNumber ? [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(11)] : [], validator: validator ?? (value) => value!.isEmpty ? "$hintText boş bırakılamaz" : null, decoration: InputDecoration(hintText: hintText, hintStyle: TextStyle(color: Colors.grey.shade400), prefixIcon: Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Icon(icon, color: _primaryColor)), border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20))),
     );
   }
 }
